@@ -1,4 +1,4 @@
-name: CI/CD casino - Backend #a
+name: CI/CD casino - Backend 
 on:
   push:
     branches: [ "deploy" ]
