@@ -61,7 +61,8 @@ jobs:
             "set -e",
             "aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | docker login --username AWS --password-stdin ${{ secrets.ECR_REGISTRY }}",
             "docker pull ${{ secrets.ECR_REPO_URL_BACKEND }}:latest",
-            "docker stop casino-backend || true",
-            "docker rm casino-backend || true",
-            "docker run -d --name casino-backend -p 3000:3000 -e DB_HOST=${{ secrets.DB_PRIVATE_IP }} -e DB_USER=root -e DB_PASSWORD=${{ secrets.DB_PASSWORD }} -e DB_NAME=${{ secrets.DB_NAME }} ${{ secrets.ECR_REPO_URL_BACKEND }}:latest"
+            "docker network create casino-net || true",
+            "docker stop backend || true",
+            "docker rm backend || true",
+            "docker run -d --restart unless-stopped --network casino-net --name backend -p 3000:3000 -e DB_HOST=${{ secrets.DB_PRIVATE_IP }} -e DB_USER=root -e DB_PASSWORD=${{ secrets.DB_PASSWORD }} -e DB_NAME=${{ secrets.DB_NAME }} ${{ secrets.ECR_REPO_URL_BACKEND }}:latest"
           ]}'
