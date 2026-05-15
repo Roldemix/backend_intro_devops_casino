@@ -25,9 +25,8 @@ jobs:
 
     - name: Build imagen Backend y push a ECR
       run: |
-        cd backend
-        docker build -t tienda-backend .
-        docker tag tienda-backend:latest ${{ secrets.ECR_REPO_URL_BACKEND }}:latest
+        docker build -t casino-backend .
+        docker tag casino-backend:latest ${{ secrets.ECR_REPO_URL_BACKEND }}:latest
         docker push ${{ secrets.ECR_REPO_URL_BACKEND }}:latest
 
     - name: Desplegar Backend vía SSM
@@ -40,8 +39,8 @@ jobs:
             "set -e",
             "aws ecr get-login-password --region '${{ secrets.AWS_REGION }}' | docker login --username AWS --password-stdin ${{ secrets.ECR_REGISTRY }}",
             "docker pull ${{ secrets.ECR_REPO_URL_BACKEND }}:latest",
-            "docker stop tienda-backend || true",
-            "docker rm tienda-backend || true",
-            "docker run -d --name tienda-backend -p 3001:3001 ${{ secrets.ECR_REPO_URL_BACKEND }}:latest"
+            "docker stop casino-backend || true",
+            "docker rm casino-backend || true",
+            "docker run -d --name casino-backend -p 3000:3000 ${{ secrets.ECR_REPO_URL_BACKEND }}:latest"
           ]}' \
           --output text
