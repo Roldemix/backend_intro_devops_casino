@@ -35,24 +35,21 @@ jobs:
         echo "psql location:" $(which psql || echo 'not found')
         psql --version || true
 
-    - name: Ejecutar init.sql en la BD
-      env:
-        PGPASSWORD: ${{ secrets.DB_PASSWORD }}
-        DB_HOST: ${{ secrets.DB_HOST }}
-        DB_PORT: ${{ secrets.DB_PORT }}
-        DB_USER: ${{ secrets.DB_USER }}
-        DB_NAME: ${{ secrets.DB_NAME }}
+    - name: Levantar Contenedor de Base de Datos vía SSM
       run: |
-        for i in {1..12}; do
-          if pg_isready -h "${DB_HOST}" -p "${DB_PORT:-5432}" -U "${DB_USER}" >/dev/null 2>&1; then
-            echo "DB disponible"
-            break
-          fi
-          echo "Esperando BD... ($i/12)"
-          sleep 5
-        done
-        PGPASSWORD="$PGPASSWORD" psql -h "$DB_HOST" -p "${DB_PORT:-5432}" -U "$DB_USER" -d "$DB_NAME" -f db/init.sql
-
+        aws ssm send-command \
+          --instance-ids ${{ secrets.EC2_DB_INSTANCE_ID }} \
+          --document-name "AWS-RunShellScript" \
+          --comment "Levantando Postgres" \
+          --region ${{ secrets.AWS_REGION }} \
+          --parameters '{"commands":[
+            "docker pull postgres:latest",
+            "docker stop casino-db || true",
+            "docker rm casino-db || true",
+            "docker run -d --name casino-db -p 5432:5432 -e POSTGRES_DB=${{ secrets.DB_NAME }} -e POSTGRES_USER=${{ secrets.DB_USER }} -e POSTGRES_PASSWORD=${{ secrets.DB_PASSWORD }} -v dbdata:/var/lib/postgresql postgres:latest",
+            "sleep 10"
+          ]}'
+          
     - name: Desplegar Backend vía SSM
       run: |
         aws ssm send-command \
