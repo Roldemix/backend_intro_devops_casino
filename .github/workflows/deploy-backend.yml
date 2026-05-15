@@ -28,6 +28,13 @@ jobs:
         docker tag casino-backend:latest ${{ secrets.ECR_REPO_URL_BACKEND }}:latest
         docker push ${{ secrets.ECR_REPO_URL_BACKEND }}:latest
 
+    - name: Instalar psql y verificar
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y postgresql-client
+        echo "psql location:" $(which psql || echo 'not found')
+        psql --version || true
+
     - name: Ejecutar init.sql en la BD
       env:
         PGPASSWORD: ${{ secrets.DB_PASSWORD }}
@@ -36,8 +43,6 @@ jobs:
         DB_USER: ${{ secrets.DB_USER }}
         DB_NAME: ${{ secrets.DB_NAME }}
       run: |
-        sudo apt-get update
-        sudo apt-get install -y postgresql-client
         for i in {1..12}; do
           if pg_isready -h "${DB_HOST}" -p "${DB_PORT:-5432}" -U "${DB_USER}" >/dev/null 2>&1; then
             echo "DB disponible"
