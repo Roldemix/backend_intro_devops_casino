@@ -3,8 +3,6 @@ name: CI/CD casino - Backend
 on:
   push:
     branches: [ "deploy" ]
-    paths:
-      - "backend/**"
 
 jobs:
   build-push-deploy-backend:
