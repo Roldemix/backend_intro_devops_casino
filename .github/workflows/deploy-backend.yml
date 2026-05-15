@@ -31,23 +31,16 @@ jobs:
 
     - name: Desplegar Backend vía SSM
       run: |
-
         aws ssm send-command \
           --instance-ids ${{ secrets.EC2_BACKEND_INSTANCE_ID }} \
           --document-name "AWS-RunShellScript" \
-          --comment "Actualizar backend con conexión a DB" \
-          --parameters commands=[ \
-            "set -e", \
-            "aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | docker login --username AWS --password-stdin ${{ secrets.ECR_REGISTRY }}", \
-            "docker pull ${{ secrets.ECR_REPO_URL_BACKEND }}:latest", \
-            "docker stop tienda-backend || true", \
-            "docker rm tienda-backend || true", \
-            "docker run -d --name tienda-backend \
-              -p 3001:3001 \
-              -e DB_HOST=${{ secrets.DB_PRIVATE_IP }} \
-              -e DB_USER=root \
-              -e DB_PASSWORD=${{ secrets.DB_PASSWORD }} \
-              -e DB_NAME=${{ secrets.DB_NAME }} \
-              ${{ secrets.ECR_REPO_URL_BACKEND }}:latest" \
-          ] \
-          --region ${{ secrets.AWS_REGION }}
+          --comment "Despliegue con variables de entorno seguras" \
+          --region ${{ secrets.AWS_REGION }} \
+          --parameters '{"commands":[
+            "set -e",
+            "aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | docker login --username AWS --password-stdin ${{ secrets.ECR_REGISTRY }}",
+            "docker pull ${{ secrets.ECR_REPO_URL_BACKEND }}:latest",
+            "docker stop tienda-backend || true",
+            "docker rm tienda-backend || true",
+            "docker run -d --name tienda-backend -p 3001:3001 -e DB_HOST=${{ secrets.DB_PRIVATE_IP }} -e DB_USER=root -e DB_PASSWORD=${{ secrets.DB_PASSWORD }} -e DB_NAME=${{ secrets.DB_NAME }} ${{ secrets.ECR_REPO_URL_BACKEND }}:latest"
+          ]}'
