@@ -29,7 +29,7 @@ jobs:
         docker push ${{ secrets.ECR_REPO_URL_BACKEND }}:latest
 
     # ========================================================================
-    # DESPLIEGUE UNIFICADO (CORREGIDO SIN COMILLAS CONFLICTIVAS)
+    # DESPLIEGUE UNIFICADO (CORRECCIÓN ABSOLUTA DE SINTAXIS)
     # ========================================================================
     - name: Desplegar Entorno Completo vía SSM
       run: |
@@ -80,7 +80,7 @@ jobs:
             "echo \"    networks:\" >> docker-compose.yml",
             "echo \"      - casino-network\" >> docker-compose.yml",
             "echo \"\" >> docker-compose.yml",
-            "volumes:\" >> docker-compose.yml",
+            "echo \"volumes:\" >> docker-compose.yml",
             "echo \"  postgres_data:\" >> docker-compose.yml",
             "echo \"\" >> docker-compose.yml",
             "echo \"networks:\" >> docker-compose.yml",
