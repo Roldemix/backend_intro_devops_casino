@@ -29,14 +29,14 @@ jobs:
         docker push ${{ secrets.ECR_REPO_URL_BACKEND }}:latest
 
     # ========================================================================
-    # DESPLIEGUE UNIFICADO CORREGIDO (CON COMILLAS VALIDADAS PARA DOCKER COMPOSE)
+    # DESPLIEGUE UNIFICADO CON INICIALIZACIÓN AUTOMÁTICA DE BD (init.sql)
     # ========================================================================
     - name: Desplegar Entorno Completo vía SSM
       run: |
         aws ssm send-command \
           --instance-ids ${{ secrets.EC2_BACKEND_INSTANCE_ID }} \
           --document-name "AWS-RunShellScript" \
-          --comment "Despliegue unificado de Back y BD con Docker Compose en AL2023" \
+          --comment "Despliegue con inicialización de BD automática usando init.sql" \
           --region ${{ secrets.AWS_REGION }} \
           --parameters '{"commands":[
             "set -e",
@@ -55,6 +55,7 @@ jobs:
             "echo \"      POSTGRES_PASSWORD: ${{ secrets.DB_PASSWORD }}\" >> docker-compose.yml",
             "echo \"    volumes:\" >> docker-compose.yml",
             "echo \"      - postgres_data:/var/lib/postgresql/data\" >> docker-compose.yml",
+            "echo \"      - ./init.sql:/docker-entrypoint-initdb.d/init.sql\" >> docker-compose.yml",
             "echo \"    ports:\" >> docker-compose.yml",
             "echo \"      - \\\"5432:5432\\\"\" >> docker-compose.yml",
             "echo \"    networks:\" >> docker-compose.yml",
@@ -86,5 +87,8 @@ jobs:
             "echo \"  casino-network:\" >> docker-compose.yml",
             "echo \"    driver: bridge\" >> docker-compose.yml",
             "docker compose pull casino-backend",
+            "docker create --name temp-back ${{ secrets.ECR_REPO_URL_BACKEND }}:latest",
+            "docker cp temp-back:/app/init.sql ./init.sql || docker cp temp-back:/app/src/db/init.sql ./init.sql || echo 'init.sql extraido'",
+            "docker rm temp-back",
             "docker compose up -d"
           ]}'
