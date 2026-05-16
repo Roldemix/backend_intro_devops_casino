@@ -29,21 +29,21 @@ jobs:
         docker push ${{ secrets.ECR_REPO_URL_BACKEND }}:latest
 
     # ========================================================================
-    # DESPLIEGUE UNIFICADO (BACKEND Y BD JUNTOS EN LA EC2 DEL BACKEND)
+    # DESPLIEGUE UNIFICADO (AMAZON LINUX 2023 - BACKEND Y BD JUNTOS)
     # ========================================================================
     - name: Desplegar Entorno Completo vía SSM
       run: |
         aws ssm send-command \
           --instance-ids ${{ secrets.EC2_BACKEND_INSTANCE_ID }} \
           --document-name "AWS-RunShellScript" \
-          --comment "Despliegue unificado de Back y BD con Docker Compose" \
+          --comment "Despliegue unificado de Back y BD con Docker Compose en AL2023" \
           --region ${{ secrets.AWS_REGION }} \
           --parameters '{"commands":[
             "set -e",
             
-            # 1. Crear carpeta del proyecto si no existe y entrar en ella
-            "mkdir -p /home/ubuntu/casino",
-            "cd /home/ubuntu/casino",
+            # 1. Crear carpeta del proyecto en el home de ec2-user si no existe y entrar en ella
+            "mkdir -p /home/ec2-user/casino",
+            "cd /home/ec2-user/casino",
             
             # 2. Autenticarse en Amazon ECR desde la EC2
             "aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | docker login --username AWS --password-stdin ${{ secrets.ECR_REGISTRY }}",
@@ -97,6 +97,6 @@ jobs:
             # 4. Hacer un pull de la última versión de la imagen que acabamos de compilar
             "docker compose pull casino-backend",
 
-            # 5. Levantar todo el stack. Si el backend cambió, se actualizará solo. Si la BD ya corría, no se interrumpe.
+            # 5. Levantar todo el stack en Amazon Linux 2023
             "docker compose up -d"
           ]}'
