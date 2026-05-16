@@ -28,41 +28,75 @@ jobs:
         docker tag casino-backend:latest ${{ secrets.ECR_REPO_URL_BACKEND }}:latest
         docker push ${{ secrets.ECR_REPO_URL_BACKEND }}:latest
 
-    - name: Instalar psql y verificar
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y postgresql-client
-        echo "psql location:" $(which psql || echo 'not found')
-        psql --version || true
-
-    - name: Levantar Contenedor de Base de Datos vía SSM
-      run: |
-        aws ssm send-command \
-          --instance-ids ${{ secrets.EC2_DB_INSTANCE_ID }} \
-          --document-name "AWS-RunShellScript" \
-          --comment "Levantando Postgres" \
-          --region ${{ secrets.AWS_REGION }} \
-          --parameters '{"commands":[
-            "docker pull postgres:latest",
-            "docker stop casino-db || true",
-            "docker rm casino-db || true",
-            "docker run -d --name casino-db -p 5432:5432 -e POSTGRES_DB=${{ secrets.DB_NAME }} -e POSTGRES_USER=${{ secrets.DB_USER }} -e POSTGRES_PASSWORD=${{ secrets.DB_PASSWORD }} -v dbdata:/var/lib/postgresql postgres:latest",
-            "sleep 10"
-          ]}'
-          
-    - name: Desplegar Backend vía SSM
+    # ========================================================================
+    # DESPLIEGUE UNIFICADO (BACKEND Y BD JUNTOS EN LA EC2 DEL BACKEND)
+    # ========================================================================
+    - name: Desplegar Entorno Completo vía SSM
       run: |
         aws ssm send-command \
           --instance-ids ${{ secrets.EC2_BACKEND_INSTANCE_ID }} \
           --document-name "AWS-RunShellScript" \
-          --comment "Despliegue con variables de entorno seguras" \
+          --comment "Despliegue unificado de Back y BD con Docker Compose" \
           --region ${{ secrets.AWS_REGION }} \
           --parameters '{"commands":[
             "set -e",
+            
+            # 1. Crear carpeta del proyecto si no existe y entrar en ella
+            "mkdir -p /home/ubuntu/casino",
+            "cd /home/ubuntu/casino",
+            
+            # 2. Autenticarse en Amazon ECR desde la EC2
             "aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | docker login --username AWS --password-stdin ${{ secrets.ECR_REGISTRY }}",
-            "docker pull ${{ secrets.ECR_REPO_URL_BACKEND }}:latest",
-            "docker network create casino-net || true",
-            "docker stop backend || true",
-            "docker rm backend || true",
-            "docker run -d --restart unless-stopped --network casino-net --name backend -p 3000:3000 -e DB_HOST=${{ secrets.DB_PRIVATE_IP }} -e DB_USER=root -e DB_PASSWORD=${{ secrets.DB_PASSWORD }} -e DB_NAME=${{ secrets.DB_NAME }} ${{ secrets.ECR_REPO_URL_BACKEND }}:latest"
+            
+            # 3. Escribir el archivo docker-compose.yml de manera dinámica en la máquina usando las variables seguras
+            "cat << '"'"'EOF'"'"' > docker-compose.yml
+            version: '"'"'3.8'"'"'
+            services:
+              casino-db:
+                image: postgres:16-alpine
+                container_name: casino-db
+                restart: always
+                environment:
+                  POSTGRES_USER: root
+                  POSTGRES_DB: ${{ secrets.DB_NAME }}
+                  POSTGRES_PASSWORD: ${{ secrets.DB_PASSWORD }}
+                volumes:
+                  - postgres_data:/var/lib/postgresql/data
+                ports:
+                  - \"5432:5432\"
+                networks:
+                  - casino-network
+
+              casino-backend:
+                image: ${{ secrets.ECR_REPO_URL_BACKEND }}:latest
+                container_name: casino-backend
+                restart: always
+                ports:
+                  - \"3000:3000\"
+                environment:
+                  - PORT=3000
+                  - CORS_ORIGIN=*
+                  - DB_USER=root
+                  - DB_PASSWORD=${{ secrets.DB_PASSWORD }}
+                  - DB_NAME=${{ secrets.DB_NAME }}
+                  - DB_PORT=5432
+                  - DB_HOST=casino-db
+                depends_on:
+                  - casino-db
+                networks:
+                  - casino-network
+
+            volumes:
+              postgres_data:
+
+            networks:
+              casino-network:
+                driver: bridge
+            EOF",
+
+            # 4. Hacer un pull de la última versión de la imagen que acabamos de compilar
+            "docker compose pull casino-backend",
+
+            # 5. Levantar todo el stack. Si el backend cambió, se actualizará solo. Si la BD ya corría, no se interrumpe.
+            "docker compose up -d"
           ]}'
