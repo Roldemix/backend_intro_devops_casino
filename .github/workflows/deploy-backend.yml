@@ -29,14 +29,14 @@ jobs:
         docker push ${{ secrets.ECR_REPO_URL_BACKEND }}:latest
 
     # ========================================================================
-    # DESPLIEGUE UNIFICADO CON INICIALIZACIÓN AUTOMÁTICA DE BD (init.sql)
+    # DESPLIEGUE UNIFICADO (CORREGIDO SIN COMILLAS CONFLICTIVAS)
     # ========================================================================
     - name: Desplegar Entorno Completo vía SSM
       run: |
         aws ssm send-command \
           --instance-ids ${{ secrets.EC2_BACKEND_INSTANCE_ID }} \
           --document-name "AWS-RunShellScript" \
-          --comment "Despliegue con inicialización de BD automática usando init.sql" \
+          --comment "Despliegue unificado con inicializacion limpia de BD" \
           --region ${{ secrets.AWS_REGION }} \
           --parameters '{"commands":[
             "set -e",
@@ -80,7 +80,7 @@ jobs:
             "echo \"    networks:\" >> docker-compose.yml",
             "echo \"      - casino-network\" >> docker-compose.yml",
             "echo \"\" >> docker-compose.yml",
-            "echo \"volumes:\" >> docker-compose.yml",
+            "volumes:\" >> docker-compose.yml",
             "echo \"  postgres_data:\" >> docker-compose.yml",
             "echo \"\" >> docker-compose.yml",
             "echo \"networks:\" >> docker-compose.yml",
@@ -88,7 +88,7 @@ jobs:
             "echo \"    driver: bridge\" >> docker-compose.yml",
             "docker compose pull casino-backend",
             "docker create --name temp-back ${{ secrets.ECR_REPO_URL_BACKEND }}:latest",
-            "docker cp temp-back:/app/init.sql ./init.sql || docker cp temp-back:/app/src/db/init.sql ./init.sql || echo 'init.sql extraido'",
+            "docker cp temp-back:/app/init.sql ./init.sql || docker cp temp-back:/app/src/db/init.sql ./init.sql || true",
             "docker rm temp-back",
             "docker compose up -d"
           ]}'
