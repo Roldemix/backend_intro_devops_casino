@@ -29,7 +29,7 @@ jobs:
         docker push ${{ secrets.ECR_REPO_URL_BACKEND }}:latest
 
     # ========================================================================
-    # DESPLIEGUE UNIFICADO (AMAZON LINUX 2023 - BACKEND Y BD JUNTOS)
+    # DESPLIEGUE UNIFICADO (AMAZON LINUX 2023 - SIN COMENTARIOS EN EL JSON)
     # ========================================================================
     - name: Desplegar Entorno Completo vía SSM
       run: |
@@ -40,15 +40,9 @@ jobs:
           --region ${{ secrets.AWS_REGION }} \
           --parameters '{"commands":[
             "set -e",
-            
-            # 1. Crear carpeta del proyecto en el home de ec2-user si no existe y entrar en ella
             "mkdir -p /home/ec2-user/casino",
             "cd /home/ec2-user/casino",
-            
-            # 2. Autenticarse en Amazon ECR desde la EC2
             "aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | docker login --username AWS --password-stdin ${{ secrets.ECR_REGISTRY }}",
-            
-            # 3. Escribir el archivo docker-compose.yml de manera dinámica en la máquina usando las variables seguras
             "cat << '"'"'EOF'"'"' > docker-compose.yml
             version: '"'"'3.8'"'"'
             services:
@@ -93,10 +87,6 @@ jobs:
               casino-network:
                 driver: bridge
             EOF",
-
-            # 4. Hacer un pull de la última versión de la imagen que acabamos de compilar
             "docker compose pull casino-backend",
-
-            # 5. Levantar todo el stack en Amazon Linux 2023
             "docker compose up -d"
           ]}'
