@@ -29,7 +29,7 @@ jobs:
         docker push ${{ secrets.ECR_REPO_URL_BACKEND }}:latest
 
     # ========================================================================
-    # DESPLIEGUE UNIFICADO (JSON REFORMATEADO EN UNA LÍNEA PARA EVITAR ERRORES)
+    # DESPLIEGUE UNIFICADO CORREGIDO (CON COMILLAS VALIDADAS PARA DOCKER COMPOSE)
     # ========================================================================
     - name: Desplegar Entorno Completo vía SSM
       run: |
@@ -43,7 +43,48 @@ jobs:
             "mkdir -p /home/ec2-user/casino",
             "cd /home/ec2-user/casino",
             "aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | docker login --username AWS --password-stdin ${{ secrets.ECR_REGISTRY }}",
-            "printf \"version: '3.8'\nservices:\n  casino-db:\n    image: postgres:16-alpine\n    container_name: casino-db\n    restart: always\n    environment:\n      POSTGRES_USER: root\n      POSTGRES_DB: ${{ secrets.DB_NAME }}\n      POSTGRES_PASSWORD: ${{ secrets.DB_PASSWORD }}\n    volumes:\n      - postgres_data:/var/lib/postgresql/data\n    ports:\n      - '5432:5432'\n    networks:\n      - casino-network\n\n  casino-backend:\n    image: ${{ secrets.ECR_REPO_URL_BACKEND }}:latest\n    container_name: casino-backend\n    restart: always\n    ports:\n      - '3000:3000'\n    environment:\n      - PORT=3000\n      - CORS_ORIGIN=*\n      - DB_USER=root\n      - DB_PASSWORD=${{ secrets.DB_PASSWORD }}\n      - DB_NAME=${{ secrets.DB_NAME }}\n      - DB_PORT=5432\n      - DB_HOST=casino-db\n    depends_on:\n      - casino-db\n    networks:\n      - casino-network\n\nvolumes:\n  postgres_data:\n\nnetworks:\n  casino-network:\n    driver: bridge\n\" > docker-compose.yml",
+            "echo \"version: \\\"3.8\\\"\" > docker-compose.yml",
+            "echo \"services:\" >> docker-compose.yml",
+            "echo \"  casino-db:\" >> docker-compose.yml",
+            "echo \"    image: postgres:16-alpine\" >> docker-compose.yml",
+            "echo \"    container_name: casino-db\" >> docker-compose.yml",
+            "echo \"    restart: always\" >> docker-compose.yml",
+            "echo \"    environment:\" >> docker-compose.yml",
+            "echo \"      POSTGRES_USER: root\" >> docker-compose.yml",
+            "echo \"      POSTGRES_DB: ${{ secrets.DB_NAME }}\" >> docker-compose.yml",
+            "echo \"      POSTGRES_PASSWORD: ${{ secrets.DB_PASSWORD }}\" >> docker-compose.yml",
+            "echo \"    volumes:\" >> docker-compose.yml",
+            "echo \"      - postgres_data:/var/lib/postgresql/data\" >> docker-compose.yml",
+            "echo \"    ports:\" >> docker-compose.yml",
+            "echo \"      - \\\"5432:5432\\\"\" >> docker-compose.yml",
+            "echo \"    networks:\" >> docker-compose.yml",
+            "echo \"      - casino-network\" >> docker-compose.yml",
+            "echo \"\" >> docker-compose.yml",
+            "echo \"  casino-backend:\" >> docker-compose.yml",
+            "echo \"    image: ${{ secrets.ECR_REPO_URL_BACKEND }}:latest\" >> docker-compose.yml",
+            "echo \"    container_name: casino-backend\" >> docker-compose.yml",
+            "echo \"    restart: always\" >> docker-compose.yml",
+            "echo \"    ports:\" >> docker-compose.yml",
+            "echo \"      - \\\"3000:3000\\\"\" >> docker-compose.yml",
+            "echo \"    environment:\" >> docker-compose.yml",
+            "echo \"      - PORT=3000\" >> docker-compose.yml",
+            "echo \"      - CORS_ORIGIN=*\" >> docker-compose.yml",
+            "echo \"      - DB_USER=root\" >> docker-compose.yml",
+            "echo \"      - DB_PASSWORD=${{ secrets.DB_PASSWORD }}\" >> docker-compose.yml",
+            "echo \"      - DB_NAME=${{ secrets.DB_NAME }}\" >> docker-compose.yml",
+            "echo \"      - DB_PORT=5432\" >> docker-compose.yml",
+            "echo \"      - DB_HOST=casino-db\" >> docker-compose.yml",
+            "echo \"    depends_on:\" >> docker-compose.yml",
+            "echo \"      - casino-db\" >> docker-compose.yml",
+            "echo \"    networks:\" >> docker-compose.yml",
+            "echo \"      - casino-network\" >> docker-compose.yml",
+            "echo \"\" >> docker-compose.yml",
+            "echo \"volumes:\" >> docker-compose.yml",
+            "echo \"  postgres_data:\" >> docker-compose.yml",
+            "echo \"\" >> docker-compose.yml",
+            "echo \"networks:\" >> docker-compose.yml",
+            "echo \"  casino-network:\" >> docker-compose.yml",
+            "echo \"    driver: bridge\" >> docker-compose.yml",
             "docker compose pull casino-backend",
             "docker compose up -d"
           ]}'
