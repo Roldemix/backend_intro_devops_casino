@@ -34,4 +34,29 @@ jobs:
           IMAGE_NAME: backend
         run: |
           set -euo pipefail
-          image="${ECR_REGISTRY}/${ECR_NAMESPACE}/
+          image="${ECR_REGISTRY}/${ECR_NAMESPACE}/${IMAGE_NAME}"
+          docker build -t "${image}:latest" -t "${image}:${IMAGE_TAG}" .
+          docker push "${image}:${IMAGE_TAG}"
+          docker push "${image}:latest"
+
+      - name: Update kubeconfig for EKS
+        run: |
+          aws eks update-kubeconfig --region ${{ env.AWS_REGION }} --name ${{ secrets.EKS_CLUSTER_NAME }}
+
+      - name: Apply k8s manifests
+        run: |
+          set -euo pipefail
+          kubectl apply -f k8s/postgres.yaml
+          kubectl apply -f k8s/deployment.yaml
+          kubectl apply -f k8s/service.yaml
+
+      - name: Update deployment image
+        env:
+          AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
+          IMAGE_TAG: ${{ github.sha }}
+          ECR_REGISTRY: ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com
+          IMAGE_NAME: backend
+        run: |
+          set -euo pipefail
+          image="${ECR_REGISTRY}/${ECR_NAMESPACE}/${IMAGE_NAME}:${IMAGE_TAG}"
+          kubectl -n casino set image deployment/backend backend=${image}
