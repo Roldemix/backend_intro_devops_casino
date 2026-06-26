@@ -65,6 +65,9 @@ stringData:
   POSTGRES_USER: casino
   POSTGRES_PASSWORD: casino
   POSTGRES_DB: casino_db
+  DB_USER: casino
+  DB_PASSWORD: casino
+  DB_NAME: casino_db
 ---
 apiVersion: v1
 kind: Service
